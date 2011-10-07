@@ -1,6 +1,4 @@
 /*
- * Copyright 2009-2010 the original author or authors.
- *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
@@ -19,6 +17,7 @@ package com.asual.lesscss;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.util.ArrayList;
@@ -41,9 +40,10 @@ import org.slf4j.LoggerFactory;
 /**
  * @author Rostislav Hristov
  * @author Uriah Carpenter
+ * @author Noah Sloan
  */
 public class LessEngine {
-
+	
 	private final Logger logger = LoggerFactory.getLogger(getClass());
 	private final FunctionContextFactory contextFactory = new FunctionContextFactory();
 
@@ -52,11 +52,14 @@ public class LessEngine {
 	private Function cf;
 	
 	public LessEngine() {
+		this(LessEngine.class.getClassLoader().getResource("META-INF/less.js"));
+	}
+	
+	public LessEngine(URL less) {
 		try {
 			logger.debug("Initializing LESS Engine.");
-			URL browser = getClass().getClassLoader().getResource("META-INF/browser.js");
-			URL less = getClass().getClassLoader().getResource("META-INF/less.js");
-			URL engine = getClass().getClassLoader().getResource("META-INF/engine.js");
+			URL browser = LessEngine.class.getClassLoader().getResource("META-INF/browser.js");
+			URL engine = LessEngine.class.getClassLoader().getResource("META-INF/engine.js");
 			Context cx = Context.enter();
 			logger.info("Using implementation version: {}", cx.getImplementationVersion());
 			cx.setOptimizationLevel(9);
@@ -98,7 +101,7 @@ public class LessEngine {
 			long time = System.currentTimeMillis();
 			logger.debug("Compiling URL: {}:{}", input.getProtocol(), input.getFile());
 			String result = call(cf, new Object[] {input.getProtocol() + ":" + input.getFile(), getClass().getClassLoader(), options, variables});
-			logger.debug("The compilation of '{}' took {} ms.", input, System.currentTimeMillis() - time);
+			logger.debug("The compilation of '{}' took {} ms.", input, System.currentTimeMillis () - time);
 			return result;
 		} catch (Exception e) {
 			throw parseLessException(e);
@@ -114,7 +117,7 @@ public class LessEngine {
 			long time = System.currentTimeMillis();
 			logger.debug("Compiling File: file:{}", input.getAbsolutePath());
 			String result = call(cf, new Object[] {"file:" + input.getAbsolutePath(), getClass().getClassLoader(), options, variables});
-			logger.debug("The compilation of '{}' took {} ms.", input, System.currentTimeMillis() - time);
+			logger.debug("The compilation of '{}' took {} ms.", input, System.currentTimeMillis () - time);
 			return result;
 		} catch (Exception e) {
 			throw parseLessException(e);
@@ -233,5 +236,18 @@ public class LessEngine {
 		}
 		
 	}
+	
+	public static void main(String[] args) throws LessException, IOException {
+		
+		LessEngine engine = new LessEngine();
+		
+		if (args.length == 1) {
+			System.out.println(engine.compile(args[0]));
+		} else if (args.length == 2) {
+			engine.compile(new File(args[0]),new File(args[1]));
+		} else {
+			System.err.println("Usage: java -jar lesscss-engine.jar <input_file> [<output_file>]");
+		}
+	}	
 	
 }
